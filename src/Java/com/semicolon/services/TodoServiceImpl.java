@@ -4,6 +4,8 @@ import com.semicolon.DTO.request.*;
 import com.semicolon.DTO.response.*;
 import com.semicolon.data.models.TodoTasks;
 import com.semicolon.data.repositories.TodoRepository;
+import com.semicolon.enums.Category;
+import com.semicolon.enums.Priority;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -23,8 +25,8 @@ public class TodoServiceImpl implements TodoService{
         String title = taskCreateRequest.getTitle();
         String description = taskCreateRequest.getDescription();
         LocalDate dueDate = taskCreateRequest.getDueDate();
-        String priority = taskCreateRequest.getPriority();
-        String category = taskCreateRequest.getCategory();
+        Priority priority = Priority.valueOf(taskCreateRequest.getPriority());
+        Category category = Category.valueOf(taskCreateRequest.getCategory());
         Boolean isRecurring = taskCreateRequest.getIsRecurring();
 
         TodoTasks todoTasks = new TodoTasks();
@@ -43,22 +45,24 @@ public class TodoServiceImpl implements TodoService{
     public ViewTaskResponse viewTask(ViewTaskRequest viewTaskRequest) {
         List<TodoTasks> tasks = todoRepository.findByTitle(viewTaskRequest.getTitle());
 
+        ViewTaskResponse response = new ViewTaskResponse();
+
         if (tasks.isEmpty()) {
-            ViewTaskResponse response = new ViewTaskResponse();
             response.setMessage("Task not found");
             return response;
         }
+
         if(tasks.size() > 1) {
             throw new RuntimeException("Multiple tasks found with the same title");
         }
+
         TodoTasks task = tasks.get(0);
-        ViewTaskResponse response = new ViewTaskResponse();
         response.setMessage("Task found successfully");
         response.setTitle(task.getTitle());
         response.setDescription(task.getDescription());
         response.setDueDate(task.getDueDate());
-        response.setPriority(task.getPriority());
-        response.setCategory(task.getCategory());
+        response.setPriority(task.getPriority().name());
+        response.setCategory(task.getCategory().name());
         response.setIsRecurring(task.getIsRecurring());
 
         return response;
@@ -70,9 +74,11 @@ public class TodoServiceImpl implements TodoService{
         TaskCompleteResponse response = new TaskCompleteResponse();
         if (tasks.isEmpty()) {
             response.setMessage("Task not found");
+        } else if(!taskCompleteRequest.getIsCompleted()) {
+            response.setMessage("Task not completed");
         } else {
             for(TodoTasks task: tasks) {
-                task.setCompleted(taskCompleteRequest.getIsCompleted());
+                task.setCompleted(true);
                 todoRepository.save(task);
             }
             response.setMessage("Task completed successfully");
@@ -82,11 +88,15 @@ public class TodoServiceImpl implements TodoService{
 
     @Override
     public TaskUpdateResponse updateTaskDetails(TaskUpdateRequest taskUpdateRequest) {
-        TodoTasks tasks = todoRepository.findById(taskUpdateRequest.getTaskId()).orElseThrow(() -> new RuntimeException("Task not found"));
-        tasks.setTitle(taskUpdateRequest.getTitle());
-        tasks.setDescription(taskUpdateRequest.getDescription());
+        List<TodoTasks> tasks = todoRepository.findByTitle(taskUpdateRequest.getTitle());
+        if (tasks.isEmpty()) {
+            throw new RuntimeException("Task not found");
+        }
+        TodoTasks task = tasks.get(0);
+        task.setTitle(taskUpdateRequest.getTitle());
+        task.setDescription(taskUpdateRequest.getDescription());
 
-        TodoTasks updatedTask = todoRepository.save(tasks);
+        TodoTasks updatedTask = todoRepository.save(task);
 
         TaskUpdateResponse updateResponse = new TaskUpdateResponse();
         updateResponse.setMessage("Task updated successfully");
@@ -96,8 +106,11 @@ public class TodoServiceImpl implements TodoService{
 
     @Override
     public TaskDeleteResponse deleteTask(TaskDeleteRequest taskDeleteRequest) {
-        TodoTasks tasks = todoRepository.findById(taskDeleteRequest.getTaskId()).orElseThrow(()-> new RuntimeException("Task not found"));
-        todoRepository.delete(tasks);
+        List<TodoTasks> tasks = todoRepository.findByTitle(taskDeleteRequest.getTaskName());
+        if (tasks.isEmpty()) {
+            throw new RuntimeException("Task not found");
+        }
+        todoRepository.delete(tasks.get(0));
         return new TaskDeleteResponse("Task deleted successfully");
     }
 }

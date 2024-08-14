@@ -10,7 +10,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TaskUpdateRequest {
-    private String taskId;
     private String title;
     private String description;
 }

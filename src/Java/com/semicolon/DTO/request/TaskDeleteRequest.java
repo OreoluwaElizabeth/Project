@@ -10,7 +10,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TaskDeleteRequest {
-    private String taskId;
     private String taskName;
     private Boolean forceDelete;
 }
